@@ -63,6 +63,12 @@ Open `RCKangaroo.sln` in Visual Studio (with CUDA C++ integration installed) and
 
 When public key is solved, software displays it and also writes it to "RESULTS.TXT" file. 
 
+<b>Bitcoin Puzzle Parameter Formula:</b>
+
+For any Bitcoin <b>Puzzle #N</b> (which covers the private key range $[2^{N-1}, 2^N - 1]$):
+- <b>-start</b>: <code>2^(N-1)</code> (e.g., <code>2^83</code> for Puzzle #84, <code>2^84</code> for Puzzle #85, <code>2^65</code> for Puzzle #66)
+- <b>-range</b>: <code>N-1</code> (e.g., <code>83</code> for Puzzle #84, <code>84</code> for Puzzle #85, <code>65</code> for Puzzle #66)
+
 <b>Running Examples:</b>
 
 <b>Benchmark Mode:</b>
@@ -74,13 +80,22 @@ When public key is solved, software displays it and also writes it to "RESULTS.T
 RCKangaroo.exe -dp 16 -range 84
 ```
 
-<b>Solving Puzzle #85:</b>
+<b>Solving Puzzle #84:</b>
 ```bash
 # Linux
-./rckangaroo -dp 16 -range 84 -start 1000000000000000000000 -pubkey 0329c4574a4fd8c810b7e42a4b398882b381bcd85e40c6883712912d167c83e73a
+./rckangaroo -dp 16 -range 83 -start 2^83 -pubkey <PUBKEY_84>
 
 # Windows
-RCKangaroo.exe -dp 16 -range 84 -start 1000000000000000000000 -pubkey 0329c4574a4fd8c810b7e42a4b398882b381bcd85e40c6883712912d167c83e73a
+RCKangaroo.exe -dp 16 -range 83 -start 2^83 -pubkey <PUBKEY_84>
+```
+
+<b>Solving Puzzle #85:</b>
+```bash
+# Linux (using exponential 2^84 or hex 1000000000000000000000)
+./rckangaroo -dp 16 -range 84 -start 2^84 -pubkey 0329c4574a4fd8c810b7e42a4b398882b381bcd85e40c6883712912d167c83e73a
+
+# Windows
+RCKangaroo.exe -dp 16 -range 84 -start 2^84 -pubkey 0329c4574a4fd8c810b7e42a4b398882b381bcd85e40c6883712912d167c83e73a
 ```
 
 <b>Generate Tames:</b>
