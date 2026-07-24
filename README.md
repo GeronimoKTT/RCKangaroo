@@ -51,7 +51,7 @@ Open `RCKangaroo.sln` in Visual Studio (with CUDA C++ integration installed) and
 
 <b>-pubkey</b>		public key to solve, both compressed and uncompressed keys are supported. If not specified, software starts in benchmark mode and solves random keys. 
 
-<b>-start</b>		start offset of the key, in hex. Mandatory if "-pubkey" option is specified. For example, for puzzle #85 start offset is "1000000000000000000000". 
+<b>-start</b>		start offset of the key. Mandatory if "-pubkey" option is specified. Supports hex strings (e.g., "1000000000000000000000" or "0x1000000000000000000000") and exponential expressions (e.g., "2^84" for puzzle #85 or "2^83" for puzzle #84). 
 
 <b>-range</b>		bit range of private the key. Mandatory if "-pubkey" option is specified. For example, for puzzle #85 bit range is "84" (84 bits). Must be in range 32...170. 
 

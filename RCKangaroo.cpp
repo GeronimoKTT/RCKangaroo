@@ -499,6 +499,83 @@ bool SolvePoint(EcPoint PntToSolve, int Range, int DP, EcInt* pk_res)
 	return true;
 }
 
+static bool ParseStartExpression(const char* str, EcInt& outVal)
+{
+	if (!str || !*str)
+		return false;
+
+	// Check if str contains '^' or '**' for exponential expressions like "2^83" or "2**83"
+	const char* caret = strchr(str, '^');
+	if (!caret)
+		caret = strstr(str, "**");
+
+	if (caret)
+	{
+		// Skip leading spaces
+		while (*str == ' ') str++;
+
+		// Parse base before '^' or '**'
+		int base = atoi(str);
+		if (base != 2)
+		{
+			printf("error: exponential start expression currently only supports base 2 (e.g. 2^83)\r\n");
+			return false;
+		}
+
+		// Skip past '^' or '**'
+		const char* exp_ptr = caret;
+		if (*exp_ptr == '^')
+			exp_ptr++;
+		else if (exp_ptr[0] == '*' && exp_ptr[1] == '*')
+			exp_ptr += 2;
+
+		int exponent = atoi(exp_ptr);
+		if (exponent < 0 || exponent > 256)
+		{
+			printf("error: exponential value must be between 0 and 256\r\n");
+			return false;
+		}
+
+		outVal.Set(1);
+		outVal.ShiftLeft(exponent);
+
+		// Check for optional addition or subtraction offset after exponent (e.g. 2^83+0x100 or 2^83-0x50)
+		const char* plus_ptr = strchr(exp_ptr, '+');
+		const char* minus_ptr = strchr(exp_ptr, '-');
+
+		if (plus_ptr)
+		{
+			EcInt offset;
+			const char* offset_str = plus_ptr + 1;
+			while (*offset_str == ' ') offset_str++;
+			if (offset_str[0] == '0' && (offset_str[1] == 'x' || offset_str[1] == 'X'))
+				offset_str += 2;
+			if (!offset.SetHexStr(offset_str))
+				return false;
+			outVal.Add(offset);
+		}
+		else if (minus_ptr)
+		{
+			EcInt offset;
+			const char* offset_str = minus_ptr + 1;
+			while (*offset_str == ' ') offset_str++;
+			if (offset_str[0] == '0' && (offset_str[1] == 'x' || offset_str[1] == 'X'))
+				offset_str += 2;
+			if (!offset.SetHexStr(offset_str))
+				return false;
+			outVal.Sub(offset);
+		}
+
+		return true;
+	}
+
+	// Default hex parsing (strip optional 0x/0X prefix)
+	if (str[0] == '0' && (str[1] == 'x' || str[1] == 'X'))
+		str += 2;
+
+	return outVal.SetHexStr(str);
+}
+
 bool ParseCommandLine(int argc, char* argv[])
 {
 	int ci = 1;
@@ -553,7 +630,7 @@ bool ParseCommandLine(int argc, char* argv[])
 		else
 		if (strcmp(argument, "-start") == 0)
 		{	
-			if (!gStart.SetHexStr(argv[ci]))
+			if (!ParseStartExpression(argv[ci], gStart))
 			{
 				printf("error: invalid value for -start option\r\n");
 				return false;
