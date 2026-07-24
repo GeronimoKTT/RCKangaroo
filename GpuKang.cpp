@@ -15,7 +15,7 @@ void CallGpuKernelGen(TKparams Kparams);
 void CallGpuKernelABC(TKparams Kparams);
 void AddPointsToList(u32* data, int cnt, u64 ops_cnt);
 extern bool gGenMode; //tames generation mode
-extern u64 gModulus;
+extern EcInt gModulus;
 
 int RCGpuKang::CalcKangCnt()
 {
@@ -289,14 +289,22 @@ void RCGpuKang::GenerateRndDistances()
 		if (i < KangCnt / 3)
 		{
 			d.RndBits(Range - 4); //TAME kangs
-			if (gModulus > 1)
-				d.data[0] = (d.data[0] / gModulus) * gModulus;
+			if (!gModulus.IsZero() && !gModulus.IsOne())
+			{
+				EcInt rem;
+				d.DivMod(gModulus, NULL, &rem);
+				d.Sub(rem);
+			}
 		}
 		else
 		{
 			d.RndBits(Range - 1);
-			if (gModulus > 1)
-				d.data[0] = (d.data[0] / gModulus) * gModulus;
+			if (!gModulus.IsZero() && !gModulus.IsOne())
+			{
+				EcInt rem;
+				d.DivMod(gModulus, NULL, &rem);
+				d.Sub(rem);
+			}
 		}
 		memcpy(RndPnts[i].priv, d.data, 24);
 	}

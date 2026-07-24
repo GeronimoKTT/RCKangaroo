@@ -453,6 +453,84 @@ bool EcInt::IsZero()
 	return ((data[0] == 0) && (data[1] == 0) && (data[2] == 0) && (data[3] == 0) && (data[4] == 0));
 }
 
+bool EcInt::IsOne()
+{
+	return ((data[0] == 1) && (data[1] == 0) && (data[2] == 0) && (data[3] == 0) && (data[4] == 0));
+}
+
+bool EcInt::SetDecStr(const char* str)
+{
+	SetZero();
+	if (!str || !*str)
+		return false;
+	while (*str == ' ')
+		str++;
+	if (!*str)
+		return false;
+
+	for (int i = 0; str[i] != '\0'; i++)
+	{
+		if (str[i] < '0' || str[i] > '9')
+			return false;
+		u64 digit = str[i] - '0';
+
+		EcInt t8 = *this;
+		t8.ShiftLeft(3);
+		EcInt t2 = *this;
+		t2.ShiftLeft(1);
+		t8.Add(t2);
+		*this = t8;
+
+		EcInt d;
+		d.Set(digit);
+		Add(d);
+	}
+	return true;
+}
+
+void EcInt::DivMod(EcInt& denom, EcInt* quotient, EcInt* remainder)
+{
+	if (denom.IsZero())
+	{
+		if (quotient) quotient->SetZero();
+		if (remainder) remainder->SetZero();
+		return;
+	}
+
+	EcInt q, r;
+	q.SetZero();
+	r.SetZero();
+
+	int nbits = 0;
+	for (int i = 3; i >= 0; i--)
+	{
+		if (data[i] != 0)
+		{
+			u64 v = data[i];
+			int b = 0;
+			while (v >>= 1) b++;
+			nbits = i * 64 + b + 1;
+			break;
+		}
+	}
+
+	for (int bit = nbits - 1; bit >= 0; bit--)
+	{
+		r.ShiftLeft(1);
+		u64 bit_val = (data[bit / 64] >> (bit % 64)) & 1ull;
+		r.data[0] |= bit_val;
+
+		if (!r.IsLessThanU(denom)) // r >= denom
+		{
+			r.Sub(denom);
+			q.data[bit / 64] |= (1ull << (bit % 64));
+		}
+	}
+
+	if (quotient) *quotient = q;
+	if (remainder) *remainder = r;
+}
+
 void EcInt::AddModP(EcInt& val)
 {
 	Add(val);

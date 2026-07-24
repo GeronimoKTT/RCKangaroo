@@ -18,6 +18,7 @@ public:
 	void Set(u64 val);
 	void SetZero();
 	bool SetHexStr(const char* str);
+	bool SetDecStr(const char* str);
 	void GetHexStr(char* str);
 	u16 GetU16(int index);
 
@@ -31,6 +32,9 @@ public:
 	bool IsLessThanI(EcInt& val);
 	bool IsEqual(EcInt& val);
 	bool IsZero();
+	bool IsOne();
+
+	void DivMod(EcInt& denom, EcInt* quotient, EcInt* remainder);
 
 	void Mul_u64(EcInt& val, u64 multiplier);
 	void Mul_i64(EcInt& val, i64 multiplier);

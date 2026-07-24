@@ -54,7 +54,7 @@ char gTamesFileName[1024];
 double gMax;
 bool gGenMode; //tames generation mode
 bool gIsOpsLimit;
-u64 gModulus = 2;
+EcInt gModulus;
 
 #pragma pack(push, 1)
 struct DBRec
@@ -325,7 +325,7 @@ bool SolvePoint(EcPoint PntToSolve, int Range, int DP, EcInt* pk_res)
 
 	printf("\r\nSolving point: Range %d bits, DP %d, start...\r\n", Range, DP);
 	double ops = 1.15 * pow(2.0, Range / 2.0);
-	double dp_val = (double)(1ull << DP);
+	double dp_val = pow(2.0, (double)DP);
 	double ram = (32 + 4 + 4) * ops / dp_val; //+4 for grow allocation and memory fragmentation
 	ram += sizeof(TListRec) * 256 * 256 * 256; //3byte-prefix table
 	ram /= (1024 * 1024 * 1024); //GB
@@ -339,6 +339,23 @@ bool SolvePoint(EcPoint PntToSolve, int Range, int DP, EcInt* pk_res)
 		ram_max += sizeof(TListRec) * 256 * 256 * 256; //3byte-prefix table
 		ram_max /= (1024 * 1024 * 1024); //GB
 		printf("Max allowed number of ops: 2^%.3f, max RAM for DPs: %.3f GB\r\n", log2(MaxTotalOps), ram_max);
+	}
+
+	double target_ops = (gMax > 0) ? MaxTotalOps : ops;
+	int optimal_dp = (int)round(log2(target_ops) - 25.0);
+	if (optimal_dp < 14) optimal_dp = 14;
+	if (optimal_dp > 60) optimal_dp = 60;
+
+	if (abs(DP - optimal_dp) >= 3)
+	{
+		printf("\r\n======================================================================\r\n");
+		printf("[WARNING] Specified -dp %d is NOT optimal for Range %d!\r\n", DP, Range);
+		if (DP < optimal_dp)
+			printf("          -dp %d is TOO LOW. It generates excessive DPs requiring %.1f GB RAM.\r\n", DP, ram);
+		else
+			printf("          -dp %d is TOO HIGH. DPs will drop too infrequently.\r\n", DP);
+		printf("          --> RECOMMENDED OPTIMAL DP VALUE: -dp %d\r\n", optimal_dp);
+		printf("======================================================================\r\n\r\n");
 	}
 
 	u64 total_kangs = GpuKangs[0]->CalcKangCnt();
@@ -376,8 +393,12 @@ bool SolvePoint(EcPoint PntToSolve, int Range, int DP, EcInt* pk_res)
 		EcJumps1[i].dist = minjump;
 		t.RndMax(minjump);
 		EcJumps1[i].dist.Add(t);
-		if (gModulus > 1)
-			EcJumps1[i].dist.data[0] = (EcJumps1[i].dist.data[0] / gModulus) * gModulus;
+		if (!gModulus.IsZero() && !gModulus.IsOne())
+		{
+			EcInt rem;
+			EcJumps1[i].dist.DivMod(gModulus, NULL, &rem);
+			EcJumps1[i].dist.Sub(rem);
+		}
 		EcJumps1[i].p = ec.MultiplyG(EcJumps1[i].dist);
 	}
 
@@ -388,8 +409,12 @@ bool SolvePoint(EcPoint PntToSolve, int Range, int DP, EcInt* pk_res)
 		EcJumps2[i].dist = minjump;
 		t.RndMax(minjump);
 		EcJumps2[i].dist.Add(t);
-		if (gModulus > 1)
-			EcJumps2[i].dist.data[0] = (EcJumps2[i].dist.data[0] / gModulus) * gModulus;
+		if (!gModulus.IsZero() && !gModulus.IsOne())
+		{
+			EcInt rem;
+			EcJumps2[i].dist.DivMod(gModulus, NULL, &rem);
+			EcJumps2[i].dist.Sub(rem);
+		}
 		EcJumps2[i].p = ec.MultiplyG(EcJumps2[i].dist);
 	}
 
@@ -400,8 +425,12 @@ bool SolvePoint(EcPoint PntToSolve, int Range, int DP, EcInt* pk_res)
 		EcJumps3[i].dist = minjump;
 		t.RndMax(minjump);
 		EcJumps3[i].dist.Add(t);
-		if (gModulus > 1)
-			EcJumps3[i].dist.data[0] = (EcJumps3[i].dist.data[0] / gModulus) * gModulus;
+		if (!gModulus.IsZero() && !gModulus.IsOne())
+		{
+			EcInt rem;
+			EcJumps3[i].dist.DivMod(gModulus, NULL, &rem);
+			EcJumps3[i].dist.Sub(rem);
+		}
 		EcJumps3[i].p = ec.MultiplyG(EcJumps3[i].dist);
 	}
 	SetRndSeed(GetTickCount64());
@@ -673,14 +702,28 @@ bool ParseCommandLine(int argc, char* argv[])
 		else
 		if (strcmp(argument, "-modulus") == 0 || strcmp(argument, "--modulus") == 0)
 		{
-			u64 val = strtoull(argv[ci], NULL, 10);
+			const char* mod_str = argv[ci];
 			ci++;
-			if (val < 1)
+			bool parsed = false;
+			if (mod_str[0] == '0' && (mod_str[1] == 'x' || mod_str[1] == 'X'))
+			{
+				parsed = gModulus.SetHexStr(mod_str + 2);
+			}
+			else if (strchr(mod_str, '^') || strstr(mod_str, "**"))
+			{
+				parsed = ParseStartExpression(mod_str, gModulus);
+			}
+			else
+			{
+				parsed = gModulus.SetDecStr(mod_str);
+				if (!parsed)
+					parsed = gModulus.SetHexStr(mod_str);
+			}
+			if (!parsed || gModulus.IsZero())
 			{
 				printf("error: invalid value for --modulus option\r\n");
 				return false;
 			}
-			gModulus = val;
 		}
 		else
 		{
@@ -708,6 +751,7 @@ bool ParseCommandLine(int argc, char* argv[])
 
 int main(int argc, char* argv[])
 {
+	gModulus.Set(2);
 #ifdef _DEBUG	
 	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 #endif
