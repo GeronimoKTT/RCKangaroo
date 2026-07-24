@@ -61,6 +61,8 @@ Open `RCKangaroo.sln` in Visual Studio (with CUDA C++ integration installed) and
 
 <b>-tames</b>		filename with tames. If file not found, software generates tames (option "-max" is required) and saves them to the file. If the file is found, software loads tames to speedup solving. 
 
+<b>--modulus</b> (or <b>-modulus</b>)	modulus alignment for kangaroo jumps and distances (default: 2, i.e. even keys). For example, `--modulus 2` aligns all kangaroo steps to even numbers. Setting `--modulus 4` aligns to multiples of 4.
+
 When public key is solved, software displays it and also writes it to "RESULTS.TXT" file. 
 
 <b>Bitcoin Puzzle Parameter Formula:</b>

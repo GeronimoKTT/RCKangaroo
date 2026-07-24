@@ -54,6 +54,7 @@ char gTamesFileName[1024];
 double gMax;
 bool gGenMode; //tames generation mode
 bool gIsOpsLimit;
+u64 gModulus = 2;
 
 #pragma pack(push, 1)
 struct DBRec
@@ -375,7 +376,8 @@ bool SolvePoint(EcPoint PntToSolve, int Range, int DP, EcInt* pk_res)
 		EcJumps1[i].dist = minjump;
 		t.RndMax(minjump);
 		EcJumps1[i].dist.Add(t);
-		EcJumps1[i].dist.data[0] &= 0xFFFFFFFFFFFFFFFE; //must be even
+		if (gModulus > 1)
+			EcJumps1[i].dist.data[0] = (EcJumps1[i].dist.data[0] / gModulus) * gModulus;
 		EcJumps1[i].p = ec.MultiplyG(EcJumps1[i].dist);
 	}
 
@@ -386,7 +388,8 @@ bool SolvePoint(EcPoint PntToSolve, int Range, int DP, EcInt* pk_res)
 		EcJumps2[i].dist = minjump;
 		t.RndMax(minjump);
 		EcJumps2[i].dist.Add(t);
-		EcJumps2[i].dist.data[0] &= 0xFFFFFFFFFFFFFFFE; //must be even
+		if (gModulus > 1)
+			EcJumps2[i].dist.data[0] = (EcJumps2[i].dist.data[0] / gModulus) * gModulus;
 		EcJumps2[i].p = ec.MultiplyG(EcJumps2[i].dist);
 	}
 
@@ -397,7 +400,8 @@ bool SolvePoint(EcPoint PntToSolve, int Range, int DP, EcInt* pk_res)
 		EcJumps3[i].dist = minjump;
 		t.RndMax(minjump);
 		EcJumps3[i].dist.Add(t);
-		EcJumps3[i].dist.data[0] &= 0xFFFFFFFFFFFFFFFE; //must be even
+		if (gModulus > 1)
+			EcJumps3[i].dist.data[0] = (EcJumps3[i].dist.data[0] / gModulus) * gModulus;
 		EcJumps3[i].p = ec.MultiplyG(EcJumps3[i].dist);
 	}
 	SetRndSeed(GetTickCount64());
@@ -665,6 +669,18 @@ bool ParseCommandLine(int argc, char* argv[])
 				return false;
 			}
 			gMax = val;
+		}
+		else
+		if (strcmp(argument, "-modulus") == 0 || strcmp(argument, "--modulus") == 0)
+		{
+			u64 val = strtoull(argv[ci], NULL, 10);
+			ci++;
+			if (val < 1)
+			{
+				printf("error: invalid value for --modulus option\r\n");
+				return false;
+			}
+			gModulus = val;
 		}
 		else
 		{
