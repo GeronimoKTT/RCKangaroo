@@ -1,4 +1,6 @@
-CC ?= g++
+ifeq ($(origin CXX), default)
+    CXX := g++
+endif
 
 # ------------------------------------------------------------------------------
 # CUDA Path Detection
@@ -25,9 +27,9 @@ ifeq ($(wildcard $(NVCC)),)
     endif
 endif
 
-CCFLAGS := -O3 -I$(CUDA_PATH)/include
+CXXFLAGS := -O3 -I$(CUDA_PATH)/include
 NVCCFLAGS := -O3 -I$(CUDA_PATH)/include -gencode=arch=compute_89,code=compute_89 -gencode=arch=compute_86,code=compute_86 -gencode=arch=compute_75,code=compute_75 -gencode=arch=compute_61,code=compute_61
-LDFLAGS := -L$(CUDA_PATH)/lib64 -L$(CUDA_PATH)/lib -lcudart -pthread
+LDFLAGS := -L$(CUDA_PATH)/lib64 -L$(CUDA_PATH)/lib -lcudart -pthread -lm
 
 CPU_SRC := RCKangaroo.cpp GpuKang.cpp Ec.cpp utils.cpp
 GPU_SRC := RCGpuCore.cu
@@ -40,10 +42,10 @@ TARGET := rckangaroo
 all: $(TARGET)
 
 $(TARGET): $(CPP_OBJECTS) $(CU_OBJECTS)
-	$(CC) $(CCFLAGS) -o $@ $^ $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) -o $@ $^ $(LDFLAGS)
 
 %.o: %.cpp
-	$(CC) $(CCFLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 %.o: %.cu
 	$(NVCC) $(NVCCFLAGS) -c $< -o $@
