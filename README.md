@@ -18,6 +18,33 @@ Discussion thread: https://bitcointalk.org/index.php?topic=5517607
 
 - No advanced features like networking, saving/loading DPs, etc.
 
+<b>Prerequisites:</b>
+
+- NVIDIA GPU (Compute Capability 6.1+, e.g. GTX 10xx, RTX 20xx, RTX 30xx, RTX 40xx series)
+- NVIDIA CUDA Toolkit (version 11.x or 12.x)
+- C++ Compiler (`g++` on Linux, Visual Studio MSVC on Windows)
+
+<b>Building:</b>
+
+<b>Linux:</b>
+
+Run `make` to compile the application:
+```bash
+make
+```
+If your CUDA Toolkit is installed in a custom directory, you can specify `CUDA_PATH`:
+```bash
+make CUDA_PATH=/path/to/cuda
+```
+To clean build outputs:
+```bash
+make clean
+```
+
+<b>Windows:</b>
+
+Open `RCKangaroo.sln` in Visual Studio (with CUDA C++ integration installed) and build the solution in `Release` `x64` configuration.
+
 <b>Command line parameters:</b>
 
 <b>-gpu</b>		which GPUs are used, for example, "035" means that GPUs #0, #3 and #5 are used. If not specified, all available GPUs are used. 
@@ -36,13 +63,34 @@ Discussion thread: https://bitcointalk.org/index.php?topic=5517607
 
 When public key is solved, software displays it and also writes it to "RESULTS.TXT" file. 
 
-Sample command line for puzzle #85:
+<b>Running Examples:</b>
 
+<b>Benchmark Mode:</b>
+```bash
+# Linux
+./rckangaroo -dp 16 -range 84
+
+# Windows
+RCKangaroo.exe -dp 16 -range 84
+```
+
+<b>Solving Puzzle #85:</b>
+```bash
+# Linux
+./rckangaroo -dp 16 -range 84 -start 1000000000000000000000 -pubkey 0329c4574a4fd8c810b7e42a4b398882b381bcd85e40c6883712912d167c83e73a
+
+# Windows
 RCKangaroo.exe -dp 16 -range 84 -start 1000000000000000000000 -pubkey 0329c4574a4fd8c810b7e42a4b398882b381bcd85e40c6883712912d167c83e73a
+```
 
-Sample command to generate tames:
+<b>Generate Tames:</b>
+```bash
+# Linux
+./rckangaroo -dp 16 -range 76 -tames tames76.dat -max 10
 
+# Windows
 RCKangaroo.exe -dp 16 -range 76 -tames tames76.dat -max 10
+```
 
 Then you can restart software with same parameters to see less K in benchmark mode or add "-tames tames76.dat" to solve some public key in 76-bit range faster.
 
