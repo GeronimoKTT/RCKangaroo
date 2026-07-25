@@ -53,7 +53,7 @@ Open `RCKangaroo.sln` in Visual Studio (with CUDA C++ integration installed) and
 
 <b>-start</b>		start offset of the key. Mandatory if "-pubkey" option is specified. Supports hex strings (e.g., "1000000000000000000000" or "0x1000000000000000000000") and exponential expressions (e.g., "2^84" for puzzle #85 or "2^83" for puzzle #84). 
 
-<b>-range</b>		bit range of private the key. Mandatory if "-pubkey" option is specified. For example, for puzzle #85 bit range is "84" (84 bits). Must be in range 32...170. 
+<b>-range</b>		bit range of private key. Mandatory if "-pubkey" option is specified. Supports integer bit lengths (e.g. "84"), hex strings (e.g. "0x400000000000000000000000000000000" or hex range size), exponential expressions (e.g. "2^84"), and range intervals (e.g. "min:max" or "min..max"). Resulting bit length must be in range 32...170. 
 
 <b>-dp</b>		DP bits. Must be in range 14...60. Low DP bits values cause larger DB but reduces DP overhead and vice versa. 
 

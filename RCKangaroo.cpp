@@ -537,6 +537,8 @@ static bool ParseStartExpression(const char* str, EcInt& outVal)
 	if (!str || !*str)
 		return false;
 
+	while (*str == ' ') str++;
+
 	// Check if str contains '^' or '**' for exponential expressions like "2^83" or "2**83"
 	const char* caret = strchr(str, '^');
 	if (!caret)
@@ -583,6 +585,7 @@ static bool ParseStartExpression(const char* str, EcInt& outVal)
 			while (*offset_str == ' ') offset_str++;
 			if (offset_str[0] == '0' && (offset_str[1] == 'x' || offset_str[1] == 'X'))
 				offset_str += 2;
+			while (offset_str[0] == '0' && offset_str[1] != '\0') offset_str++;
 			if (!offset.SetHexStr(offset_str))
 				return false;
 			outVal.Add(offset);
@@ -594,6 +597,7 @@ static bool ParseStartExpression(const char* str, EcInt& outVal)
 			while (*offset_str == ' ') offset_str++;
 			if (offset_str[0] == '0' && (offset_str[1] == 'x' || offset_str[1] == 'X'))
 				offset_str += 2;
+			while (offset_str[0] == '0' && offset_str[1] != '\0') offset_str++;
 			if (!offset.SetHexStr(offset_str))
 				return false;
 			outVal.Sub(offset);
@@ -606,7 +610,131 @@ static bool ParseStartExpression(const char* str, EcInt& outVal)
 	if (str[0] == '0' && (str[1] == 'x' || str[1] == 'X'))
 		str += 2;
 
+	while (str[0] == '0' && str[1] != '\0')
+		str++;
+
 	return outVal.SetHexStr(str);
+}
+
+static bool GetEcIntBitLength(EcInt& val, int& outBits)
+{
+	if (val.IsZero())
+		return false;
+
+	int hi_bit = -1;
+	for (int i = 4; i >= 0; i--)
+	{
+		if (val.data[i] != 0)
+		{
+			u32 idx = 0;
+			_BitScanReverse64(&idx, val.data[i]);
+			hi_bit = i * 64 + (int)idx;
+			break;
+		}
+	}
+
+	if (hi_bit < 0)
+		return false;
+
+	EcInt pow2;
+	pow2.SetZero();
+	if (hi_bit < 256)
+	{
+		pow2.data[hi_bit / 64] = (1ull << (hi_bit % 64));
+	}
+
+	if (val.IsEqual(pow2))
+		outBits = hi_bit;
+	else
+		outBits = hi_bit + 1;
+
+	return true;
+}
+
+static bool ParseRangeExpression(const char* str, int& outRange)
+{
+	if (!str || !*str)
+		return false;
+
+	while (*str == ' ') str++;
+
+	// Check if str is a range interval with separator (e.g. "min:max", "min..max")
+	const char* colon = strchr(str, ':');
+	if (!colon) colon = strstr(str, "..");
+
+	if (colon)
+	{
+		char start_buf[256] = {0};
+		int len1 = (int)(colon - str);
+		if (len1 >= 256) return false;
+		strncpy(start_buf, str, len1);
+		start_buf[len1] = '\0';
+
+		const char* end_ptr = colon + (colon[0] == '.' ? 2 : 1);
+		EcInt vStart, vEnd;
+		if (!ParseStartExpression(start_buf, vStart) || !ParseStartExpression(end_ptr, vEnd))
+			return false;
+
+		gStart = vStart;
+		gStartSet = true;
+
+		EcInt vDelta = vEnd;
+		vDelta.Sub(vStart);
+		if (!GetEcIntBitLength(vDelta, outRange))
+			return false;
+		return true;
+	}
+
+	// Check if str is an exponential expression like "2^84" or "2**84"
+	const char* caret = strchr(str, '^');
+	if (!caret) caret = strstr(str, "**");
+	if (caret)
+	{
+		int base = atoi(str);
+		if (base == 2)
+		{
+			const char* exp_ptr = caret + (caret[0] == '^' ? 1 : 2);
+			int exp = atoi(exp_ptr);
+			if (exp >= 32 && exp <= 170)
+			{
+				outRange = exp;
+				return true;
+			}
+		}
+	}
+
+	// Check if str is a simple integer bit count (only digits, value between 32 and 170)
+	bool is_pure_digits = true;
+	for (int i = 0; str[i] != '\0'; i++)
+	{
+		if (str[i] < '0' || str[i] > '9')
+		{
+			is_pure_digits = false;
+			break;
+		}
+	}
+
+	if (is_pure_digits)
+	{
+		int val = atoi(str);
+		if (val >= 32 && val <= 170)
+		{
+			outRange = val;
+			return true;
+		}
+	}
+
+	// Otherwise, attempt to parse as hex string or hex value
+	EcInt hexVal;
+	if (ParseStartExpression(str, hexVal))
+	{
+		if (GetEcIntBitLength(hexVal, outRange))
+		{
+			return true;
+		}
+	}
+
+	return false;
 }
 
 bool ParseCommandLine(int argc, char* argv[])
@@ -651,13 +779,13 @@ bool ParseCommandLine(int argc, char* argv[])
 		else
 		if (strcmp(argument, "-range") == 0)
 		{
-			int val = atoi(argv[ci]);
-			ci++;
-			if ((val < 32) || (val > 170))
+			int val = 0;
+			if (!ParseRangeExpression(argv[ci], val) || (val < 32) || (val > 170))
 			{
 				printf("error: invalid value for -range option\r\n");
 				return false;
 			}
+			ci++;
 			gRange = val;
 		}
 		else
